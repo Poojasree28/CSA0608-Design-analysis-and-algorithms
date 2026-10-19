@@ -1,0 +1,413 @@
+
+"""
+ShopSphere Scalability Audit
+Course: CSA06 - Design and Analysis of Algorithms
+Assessment: CO1 - Assessment Tool 1
+
+This program calculates operation counts and scalability estimates
+for the modules described in the assignment.
+"""
+
+from math import ceil, log2
+
+# Assignment assumptions
+OPS_PER_SECOND = 10
+WINDOW_SECONDS = 10 * 60
+CATALOGUE_SIZE = 1_000_000
+
+
+# --------------------------------------------------
+# M1: Duplicate-Listing Detector
+# --------------------------------------------------
+
+def m1_comparisons(n: int) -> int:
+    """
+    Exact number of product-pair comparisons:
+    C(n) = n * (n - 1) / 2
+
+    Time complexity: Theta(n^2)
+    Auxiliary space: Theta(1)
+    """
+    if n < 0:
+        raise ValueError("n must be non-negative")
+
+    return n * (n - 1) // 2
+
+
+# --------------------------------------------------
+# M2: API Rate Limiter
+# --------------------------------------------------
+
+def m2_audits(n: int) -> int:
+    """
+    Counts audits performed by:
+
+        i = 1
+        while i < n:
+            audit i requests
+            i = i * 2
+
+    Exact count for n > 1:
+        2^ceil(log2(n)) - 1
+
+    Time complexity: Theta(n)
+    Auxiliary space: Theta(1)
+    """
+    if n <= 1:
+        return 0
+
+    return (1 << ceil(log2(n))) - 1
+
+
+# --------------------------------------------------
+# M3: Product Search - Version S1
+# Linear Search
+# --------------------------------------------------
+
+def linear_search(product_ids: list, target: int) -> int:
+    """
+    Searches sequentially through an unsorted list.
+    Returns the index if found; otherwise returns -1.
+
+    Best-case time: Theta(1)
+    Average-case time: Theta(n), under the usual
+                       uniform-position assumptions
+    Worst-case time: Theta(n)
+    Auxiliary space: Theta(1)
+    """
+    for index, product_id in enumerate(product_ids):
+        if product_id == target:
+            return index
+
+    return -1
+
+
+def s1_average_comparisons(n: int, p: float) -> float:
+    """
+    Expected comparisons for linear search.
+
+    Assumptions:
+    - Probability p that the target exists.
+    - If present, each of the n positions is equally likely.
+    - If absent, all n items are examined.
+
+    E[C] = p(n + 1)/2 + (1 - p)n
+         = n - p(n - 1)/2
+    """
+    if n < 1:
+        raise ValueError("n must be at least 1")
+
+    if not 0 <= p <= 1:
+        raise ValueError("p must be between 0 and 1")
+
+    return n - p * (n - 1) / 2
+
+
+# --------------------------------------------------
+# M3: Product Search - Version S2
+# Binary Search
+# --------------------------------------------------
+
+def binary_search(sorted_product_ids: list, target: int) -> int:
+    """
+    Searches a sorted list by repeatedly halving
+    the search interval.
+
+    Best-case time: Theta(1)
+    Average-case time: Theta(log n)
+    Worst-case time: Theta(log n)
+    Auxiliary space: Theta(1), iterative version
+    """
+    low = 0
+    high = len(sorted_product_ids) - 1
+
+    while low <= high:
+        mid = (low + high) // 2
+
+        if sorted_product_ids[mid] == target:
+            return mid
+
+        elif sorted_product_ids[mid] < target:
+            low = mid + 1
+
+        else:
+            high = mid - 1
+
+    return -1
+
+
+def s2_comparisons_power_of_two(n: int) -> int:
+    """
+    Solves T(n) = T(n/2) + 1, T(1) = 1
+    for n being a positive power of two.
+
+    Closed form: T(n) = log2(n) + 1
+    """
+    if n < 1 or n & (n - 1):
+        raise ValueError(
+            "n must be a positive power of two"
+        )
+
+    return int(log2(n)) + 1
+
+
+# --------------------------------------------------
+# M4: Recommendation Engine
+# --------------------------------------------------
+
+def m4_current_scale(n: int) -> int:
+    """
+    Current recurrence:
+        T(n) = 4T(n/2) + n
+
+    Complexity: Theta(n^2)
+
+    Returns the leading-scale estimate n^2.
+    This is not an exact recurrence operation count.
+    """
+    return n ** 2
+
+
+def m4_redesign_scale(n: int) -> float:
+    """
+    Redesigned recurrence:
+        T(n) = 2T(n/2) + n
+
+    Complexity: Theta(n log n)
+
+    Returns n * log2(n) as a leading-scale estimate.
+    This is not an exact recurrence operation count.
+    """
+    if n <= 0:
+        raise ValueError("n must be positive")
+
+    return n * log2(n)
+
+
+# --------------------------------------------------
+# M5: Sales Analytics Engine
+# --------------------------------------------------
+
+def m5_scale(n: int) -> float:
+    """
+    Recurrence:
+        T(n) = 2T(n/2) + n log n
+
+    Complexity: Theta(n log^2 n)
+
+    Returns n * (log2(n))^2 as a leading-scale
+    estimate, not an exact recurrence operation count.
+    """
+    if n <= 0:
+        raise ValueError("n must be positive")
+
+    return n * (log2(n) ** 2)
+
+
+# --------------------------------------------------
+# Runtime Estimation
+# --------------------------------------------------
+
+def estimated_seconds(operations: float) -> float:
+    """
+    Estimates runtime using the assignment assumption
+    of 10 basic operations per second.
+    """
+    return operations / OPS_PER_SECOND
+
+
+def format_duration(seconds: float) -> str:
+    """Converts seconds into a readable duration."""
+    if seconds < 60:
+        return f"{seconds:,.2f} seconds"
+
+    if seconds < 3600:
+        return f"{seconds / 60:,.2f} minutes"
+
+    if seconds < 86400:
+        return f"{seconds / 3600:,.2f} hours"
+
+    return f"{seconds / 86400:,.2f} days"
+
+
+# --------------------------------------------------
+# Main Program
+# --------------------------------------------------
+
+def main() -> None:
+    n = CATALOGUE_SIZE
+
+    print("=" * 76)
+    print("        SHOPSPHERE E-COMMERCE SCALABILITY AUDIT")
+    print("=" * 76)
+
+    print(f"Catalogue size: {n:,} products")
+    print(f"Server throughput: {OPS_PER_SECOND} operations/second")
+
+    capacity = OPS_PER_SECOND * WINDOW_SECONDS
+
+    print(
+        f"10-minute processing capacity: "
+        f"{capacity:,} basic operations"
+    )
+
+    print("\n1. M1 - DUPLICATE-LISTING DETECTOR")
+    print("-" * 76)
+
+    m1_ops = m1_comparisons(n)
+
+    print(f"Exact comparisons: {m1_ops:,}")
+    print("Time complexity: Theta(n^2)")
+    print("Auxiliary space: Theta(1)")
+    print(
+        "Estimated runtime:",
+        format_duration(estimated_seconds(m1_ops))
+    )
+
+    print("\n2. M2 - API RATE LIMITER")
+    print("-" * 76)
+
+    m2_ops = m2_audits(n)
+
+    print(f"Exact audit operations: {m2_ops:,}")
+    print("Time complexity: Theta(n)")
+    print("Auxiliary space: Theta(1)")
+    print(
+        "Estimated runtime:",
+        format_duration(estimated_seconds(m2_ops))
+    )
+
+    print("\nM2 VERIFICATION FOR n = 1,024")
+    print("-" * 76)
+
+    verification_n = 1024
+    verification_ops = m2_audits(verification_n)
+
+    print(f"Input size: {verification_n:,}")
+    print(f"Calculated audits: {verification_ops:,}")
+    print("Expected audits: 1,023")
+
+    assert verification_ops == 1023
+
+    print("M2 verification: PASSED")
+
+    print("\n3. M3 - PRODUCT SEARCH")
+    print("-" * 76)
+
+    print("S1 - Linear Search")
+    print("Best-case comparisons: 1")
+    print(f"Worst-case comparisons: {n:,}")
+    print("Time complexity: Theta(n)")
+    print("Auxiliary space: Theta(1)")
+
+    p = 0.5
+    average_ops = s1_average_comparisons(n, p)
+
+    print(f"\nExpected comparisons when p = {p}:")
+    print(f"{average_ops:,.2f}")
+
+    print("\nS2 - Binary Search")
+    print("Time complexity: Theta(log n)")
+    print("Iterative auxiliary space: Theta(1)")
+    print("Recursive auxiliary space: Theta(log n)")
+    print(
+        "Approximate comparisons for one million items:",
+        ceil(log2(n))
+    )
+
+    print("\n4. M4 - RECOMMENDATION ENGINE")
+    print("-" * 76)
+
+    current_ops = m4_current_scale(n)
+    redesign_ops = m4_redesign_scale(n)
+
+    print("Current design: T(n) = 4T(n/2) + n")
+    print("Complexity: Theta(n^2)")
+    print(f"Leading-scale estimate: {current_ops:,.0f}")
+    print(
+        "Estimated runtime:",
+        format_duration(estimated_seconds(current_ops))
+    )
+
+    print("\nProposed redesign: T(n) = 2T(n/2) + n")
+    print("Complexity: Theta(n log n)")
+    print(f"Leading-scale estimate: {redesign_ops:,.0f}")
+    print(
+        "Estimated runtime:",
+        format_duration(estimated_seconds(redesign_ops))
+    )
+
+    print("\n5. M5 - SALES ANALYTICS ENGINE")
+    print("-" * 76)
+
+    sales_ops = m5_scale(n)
+
+    print("Recurrence: T(n) = 2T(n/2) + n log n")
+    print("Complexity: Theta(n log^2 n)")
+    print(f"Leading-scale estimate: {sales_ops:,.0f}")
+    print(
+        "Estimated runtime:",
+        format_duration(estimated_seconds(sales_ops))
+    )
+
+    print("\n6. NIGHTLY PROCESSING DECISION")
+    print("-" * 76)
+
+    results = [
+        ("M1", m1_ops),
+        ("M2", m2_ops),
+        ("S2", ceil(log2(n))),
+        ("M4 current", current_ops),
+        ("M4 redesign", redesign_ops),
+        ("M5", sales_ops),
+    ]
+
+    print(f"Maximum operations in 10 minutes: {capacity:,}\n")
+    print(f"{'Module':<18}{'Operations':>24}{'Decision':>22}")
+    print("-" * 64)
+
+    for module, operations in results:
+        decision = (
+            "WITHIN LIMIT"
+            if operations <= capacity
+            else "EXCEEDS LIMIT"
+        )
+
+        print(
+            f"{module:<18}{operations:>24,.2f}"
+            f"{decision:>22}"
+        )
+
+    print("\n7. VERIFICATION CHECKS")
+    print("-" * 76)
+
+    assert m1_comparisons(5) == 10
+    assert m2_audits(1024) == 1023
+    assert linear_search([10, 20, 30], 20) == 1
+    assert binary_search([10, 20, 30], 20) == 1
+    assert abs(
+        s1_average_comparisons(1_000_000, 0.5)
+        - 750_000.25
+    ) < 1e-9
+
+    print("M1 operation-count test: PASSED")
+    print("M2 operation-count test: PASSED")
+    print("Linear search test: PASSED")
+    print("Binary search test: PASSED")
+    print("Average-comparison test: PASSED")
+
+    print("\n" + "=" * 76)
+    print("AUDIT COMPLETED SUCCESSFULLY")
+    print(
+        "Note: M4 and M5 operation counts are leading-scale "
+        "estimates, not exact counts."
+    )
+    print(
+        "The runtime estimates use the assignment's simplified "
+        "10 operations/second assumption."
+    )
+    print("=" * 76)
+
+
+if __name__ == "__main__":
+    main()
