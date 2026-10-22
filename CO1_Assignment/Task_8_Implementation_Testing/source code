@@ -1,0 +1,124 @@
+
+import time
+
+# 1. Linear Search
+def linear_search(arr, key):
+    comparisons = 0
+
+    for i in range(len(arr)):
+        comparisons += 1
+        if arr[i] == key:
+            return i, comparisons
+
+    return -1, comparisons
+
+
+# 2. Iterative Binary Search
+def iterative_binary_search(arr, key):
+    low = 0
+    high = len(arr) - 1
+    comparisons = 0
+
+    while low <= high:
+        mid = (low + high) // 2
+
+        comparisons += 1
+        if arr[mid] == key:
+            return mid, comparisons
+
+        comparisons += 1
+        if key < arr[mid]:
+            high = mid - 1
+        else:
+            low = mid + 1
+
+    return -1, comparisons
+
+
+# 3. Recursive Binary Search
+def recursive_binary_search(arr, key):
+    comparisons = 0
+
+    def search(low, high):
+        nonlocal comparisons
+
+        if low > high:
+            return -1
+
+        mid = (low + high) // 2
+
+        comparisons += 1
+        if arr[mid] == key:
+            return mid
+
+        comparisons += 1
+        if key < arr[mid]:
+            return search(low, mid - 1)
+
+        return search(mid + 1, high)
+
+    result = search(0, len(arr) - 1)
+    return result, comparisons
+
+
+# All algorithms use the same sorted dataset.
+algorithms = [
+    ("Linear Search", linear_search),
+    ("Iterative Binary Search", iterative_binary_search),
+    ("Recursive Binary Search", recursive_binary_search)
+]
+
+dataset_sizes = [1000, 10000, 100000, 1000000]
+
+print("TASK 8 - IMPLEMENTATION AND TESTING")
+print("=" * 75)
+
+# Correctness tests
+print("\n1. CORRECTNESS TESTS")
+test_data = [10, 20, 30, 40, 50]
+test_cases = [
+    ("Beginning", 10, 0),
+    ("Middle", 30, 2),
+    ("End", 50, 4),
+    ("Absent", 60, -1)
+]
+
+for name, algorithm in algorithms:
+    print(f"\n{name}")
+    for case, key, expected in test_cases:
+        result, count = algorithm(test_data, key)
+        status = "PASS" if result == expected else "FAIL"
+        print(
+            f"{case}: key={key}, index={result}, "
+            f"comparisons={count}, {status}"
+        )
+        assert result == expected, f"{name} failed: {case}"
+
+# Performance tests
+# Search for a missing key greater than every array element.
+# This gives Linear Search its worst case.
+print("\n\n2. PERFORMANCE TESTS")
+print("-" * 75)
+print(
+    f"{'Size':>10} | {'Algorithm':<25} | "
+    f"{'Comparisons':>12} | {'Time (ms)':>12}"
+)
+print("-" * 75)
+
+for n in dataset_sizes:
+    data = list(range(1, n + 1))
+    key = n + 1  # Absent key
+
+    for name, algorithm in algorithms:
+        start = time.perf_counter()
+        result, comparisons = algorithm(data, key)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+
+        assert result == -1
+
+        print(
+            f"{n:>10} | {name:<25} | "
+            f"{comparisons:>12} | {elapsed_ms:>12.4f}"
+        )
+
+print("\nAll correctness and performance tests completed.")
