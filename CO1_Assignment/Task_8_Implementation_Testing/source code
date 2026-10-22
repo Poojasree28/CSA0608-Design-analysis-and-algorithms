@@ -1,124 +1,229 @@
-
 import time
+import random
+import statistics
+import csv
+import matplotlib.pyplot as plt
 
-# 1. Linear Search
-def linear_search(arr, key):
+SIZES = [1000, 10000, 100000, 1000000]
+REQUESTS = 30
+
+
+# 1. LINEAR SEARCH
+def linear_search(data, target):
     comparisons = 0
 
-    for i in range(len(arr)):
+    for i in range(len(data)):
         comparisons += 1
-        if arr[i] == key:
+
+        if data[i] == target:
             return i, comparisons
 
     return -1, comparisons
 
 
-# 2. Iterative Binary Search
-def iterative_binary_search(arr, key):
+# 2. ITERATIVE BINARY SEARCH
+def binary_search(data, target):
     low = 0
-    high = len(arr) - 1
+    high = len(data) - 1
     comparisons = 0
 
     while low <= high:
         mid = (low + high) // 2
-
         comparisons += 1
-        if arr[mid] == key:
+
+        if data[mid] == target:
             return mid, comparisons
-
-        comparisons += 1
-        if key < arr[mid]:
-            high = mid - 1
-        else:
+        elif data[mid] < target:
             low = mid + 1
+        else:
+            high = mid - 1
 
     return -1, comparisons
 
 
-# 3. Recursive Binary Search
-def recursive_binary_search(arr, key):
-    comparisons = 0
+# 3. RECURSIVE BINARY SEARCH
+def recursive_binary_search(
+        data, target, low=0, high=None, comparisons=None):
 
-    def search(low, high):
-        nonlocal comparisons
+    if high is None:
+        high = len(data) - 1
 
-        if low > high:
-            return -1
+    if comparisons is None:
+        comparisons = [0]
 
-        mid = (low + high) // 2
+    if low > high:
+        return -1, comparisons[0]
 
-        comparisons += 1
-        if arr[mid] == key:
-            return mid
+    mid = (low + high) // 2
+    comparisons[0] += 1
 
-        comparisons += 1
-        if key < arr[mid]:
-            return search(low, mid - 1)
+    if data[mid] == target:
+        return mid, comparisons[0]
 
-        return search(mid + 1, high)
-
-    result = search(0, len(arr) - 1)
-    return result, comparisons
-
-
-# All algorithms use the same sorted dataset.
-algorithms = [
-    ("Linear Search", linear_search),
-    ("Iterative Binary Search", iterative_binary_search),
-    ("Recursive Binary Search", recursive_binary_search)
-]
-
-dataset_sizes = [1000, 10000, 100000, 1000000]
-
-print("TASK 8 - IMPLEMENTATION AND TESTING")
-print("=" * 75)
-
-# Correctness tests
-print("\n1. CORRECTNESS TESTS")
-test_data = [10, 20, 30, 40, 50]
-test_cases = [
-    ("Beginning", 10, 0),
-    ("Middle", 30, 2),
-    ("End", 50, 4),
-    ("Absent", 60, -1)
-]
-
-for name, algorithm in algorithms:
-    print(f"\n{name}")
-    for case, key, expected in test_cases:
-        result, count = algorithm(test_data, key)
-        status = "PASS" if result == expected else "FAIL"
-        print(
-            f"{case}: key={key}, index={result}, "
-            f"comparisons={count}, {status}"
-        )
-        assert result == expected, f"{name} failed: {case}"
-
-# Performance tests
-# Search for a missing key greater than every array element.
-# This gives Linear Search its worst case.
-print("\n\n2. PERFORMANCE TESTS")
-print("-" * 75)
-print(
-    f"{'Size':>10} | {'Algorithm':<25} | "
-    f"{'Comparisons':>12} | {'Time (ms)':>12}"
-)
-print("-" * 75)
-
-for n in dataset_sizes:
-    data = list(range(1, n + 1))
-    key = n + 1  # Absent key
-
-    for name, algorithm in algorithms:
-        start = time.perf_counter()
-        result, comparisons = algorithm(data, key)
-        elapsed_ms = (time.perf_counter() - start) * 1000
-
-        assert result == -1
-
-        print(
-            f"{n:>10} | {name:<25} | "
-            f"{comparisons:>12} | {elapsed_ms:>12.4f}"
+    elif data[mid] < target:
+        return recursive_binary_search(
+            data, target, mid + 1, high, comparisons
         )
 
-print("\nAll correctness and performance tests completed.")
+    else:
+        return recursive_binary_search(
+            data, target, low, mid - 1, comparisons
+        )
+
+
+# 4. MEASURE EXECUTION TIME
+def measure(algorithm, data, target):
+    start = time.perf_counter()
+
+    result, comparisons = algorithm(data, target)
+
+    end = time.perf_counter()
+    execution_time = (end - start) * 1000
+
+    return result, comparisons, execution_time
+
+
+# 5. MAIN PROGRAM
+def main():
+    random.seed(42)
+    results = []
+
+    algorithms = [
+        ("Linear Search", linear_search),
+        ("Iterative Binary Search", binary_search),
+        ("Recursive Binary Search", recursive_binary_search)
+    ]
+
+    for n in SIZES:
+        print("\nDataset size:", n)
+
+        # Generate unique student registration numbers
+        sorted_data = list(range(10000000, 10000000 + n))
+
+        # Shuffle data for linear search
+        unsorted_data = sorted_data.copy()
+        random.shuffle(unsorted_data)
+
+        # Select random targets
+        targets = [
+            random.choice(sorted_data)
+            for _ in range(REQUESTS)
+        ]
+
+        for name, algorithm in algorithms:
+
+            # Binary search requires sorted data
+            if "Binary" in name:
+                data = sorted_data
+            else:
+                data = unsorted_data
+
+            times = []
+            comparisons_list = []
+
+            for target in targets:
+                index, comparisons, elapsed = measure(
+                    algorithm, data, target
+                )
+
+                # Verify the search result
+                if index == -1 or data[index] != target:
+                    raise ValueError("Search result is incorrect")
+
+                times.append(elapsed)
+                comparisons_list.append(comparisons)
+
+            avg_time = statistics.mean(times)
+            avg_comparisons = statistics.mean(comparisons_list)
+            max_comparisons = max(comparisons_list)
+
+            results.append({
+                "Dataset Size": n,
+                "Algorithm": name,
+                "Average Time (ms)": avg_time,
+                "Average Comparisons": avg_comparisons,
+                "Maximum Comparisons": max_comparisons
+            })
+
+            print(
+                name,
+                "| Average time:",
+                round(avg_time, 6), "ms",
+                "| Average comparisons:",
+                round(avg_comparisons, 2)
+            )
+
+    # 6. SAVE RESULTS TO CSV
+    fields = [
+        "Dataset Size",
+        "Algorithm",
+        "Average Time (ms)",
+        "Average Comparisons",
+        "Maximum Comparisons"
+    ]
+
+    with open("benchmark_results.csv", "w", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(results)
+
+    # 7. GRAPH: EXECUTION TIME
+    plt.figure()
+
+    for name, _ in algorithms:
+        rows = [
+            r for r in results if r["Algorithm"] == name
+        ]
+
+        plt.plot(
+            [r["Dataset Size"] for r in rows],
+            [r["Average Time (ms)"] for r in rows],
+            marker="o",
+            label=name
+        )
+
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.xlabel("Number of Student Records")
+    plt.ylabel("Average Execution Time (ms)")
+    plt.title("Search Algorithm Execution Time")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("execution_time.png")
+    plt.show()
+
+    # 8. GRAPH: NUMBER OF COMPARISONS
+    plt.figure()
+
+    for name, _ in algorithms:
+        rows = [
+            r for r in results if r["Algorithm"] == name
+        ]
+
+        plt.plot(
+            [r["Dataset Size"] for r in rows],
+            [r["Average Comparisons"] for r in rows],
+            marker="o",
+            label=name
+        )
+
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.xlabel("Number of Student Records")
+    plt.ylabel("Average Number of Comparisons")
+    plt.title("Search Algorithm Comparison Count")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("key_comparisons.png")
+    plt.show()
+
+    print("\nAll search tests passed.")
+    print("Results saved to benchmark_results.csv")
+    print("Graphs saved to execution_time.png")
+    print("and key_comparisons.png")
+
+
+if __name__ == "__main__":
+    main()
