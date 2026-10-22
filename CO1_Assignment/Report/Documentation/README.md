@@ -434,7 +434,7 @@ if __name__ == "__main__":
 
                                        
                                         
-                                        Figures 1: Seach algorithm Performance
+                                                 FIGURES 1: SEARCH ALGORITHM PERFORMANCE
 
 
 
@@ -444,7 +444,7 @@ if __name__ == "__main__":
 
 
                         
-                         Figure 2. Average per-request search time versus dataset size (log axes)
+                                  FIGURE 2. AVERAGE PER-REQUEST SEARCH TIME VERSUS DATASET SIZE (LOG AXES)
 
 
 
@@ -454,7 +454,7 @@ if __name__ == "__main__":
 
 
                      
-                      Figure 3. Average key comparisons/lookup operations versus dataset size.
+                                FIGURE 3. AVERAGE KEY COMPARISONS/LOOKUP OPERATIONS VERSUS DATASET SIZE
 
 
 
