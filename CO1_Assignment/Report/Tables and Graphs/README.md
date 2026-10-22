@@ -85,7 +85,13 @@
 
 
 
-                                                               FIGURE 1: SEARCH ALGORITHM PERFORMANCE
+                                                    FIGURE 1: SEARCH ALGORITHM PERFORMANCE
+
+# **FIGURE 3: AVERAGE PER-REQUEST SEARCH TIME VERSUS DATASET SIZE (LOG AXES)**
+
+# **FIGURE 4: AVERAGE KEY COMPARISONS/LOOKUP OPERATIONS VERSUS DATASET SIZE**
+
+
 
 
 
@@ -97,7 +103,10 @@
 
 
 
-                                               FIGURE 2. AVERAGE PER-REQUEST SEARCH TIME VERSUS DATASET SIZE (LOG AXES)
+                                             
+
+                                             FIGURE 2: AVERAGE PER-REQUEST SEARCH TIME VERSUS DATASET SIZE (LOG AXES)
+
 
 
 
