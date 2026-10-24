@@ -1,144 +1,82 @@
-# TASK 12 – RE-EVALUATE AND ADAPT THE DESIGN 
-## A. Impact Analysis 
-### 12.1 Changes in Requirements
+# TASK 11 – RECOMMEND AND DEFEND THE FINAL DESIGN 
+## 11.1 Introduction
 
-The university student-record system must now process 50,000 search requests per hour using a database containing 1,000,000 student records. However, new student records are added only once per day.
+The university student-record system contains approximately 1,000,000 student records and receives 50,000 search requests per hour. Therefore, an efficient searching algorithm is required to provide fast record retrieval and support future database growth.
 
-These requirements highlight the need for fast searching while keeping the cost of maintaining the database manageable.
+Based on the theoretical complexity analysis and experimental comparison, Iterative Binary Search is recommended for the university student-record system, provided that the registration numbers are maintained in sorted order.
 
-### 12.2 Impact on Original Assumptions
+## 11.2 Recommended Algorithm
 
-The original design recommended Iterative Binary Search because it provides logarithmic search complexity. The changed requirements emphasize the following factors:
+**Recommended Approach: Iterative Binary Search**
 
-1. **High search frequency:** The system must handle 50,000 searches per hour, equivalent to approximately 13.89 searches per second on average.
-2. **Large dataset:** Searching must remain efficient for 1,000,000 student records.
-3. **Low update frequency:** New records are added only once per day, so the database does not need to be reorganized after every search.
-4. **Preprocessing cost:** Sorting or maintaining an index may require additional processing, but this cost can be spread across many searches.
-5. **Scalability:** The chosen approach must remain efficient as the database grows.
+Iterative Binary Search searches a sorted array by comparing the required registration number with the middle element. If the key is not found, it eliminates half of the remaining search interval and continues until the key is found or the interval becomes empty.
 
-The main change is that search performance becomes especially important compared with record-update frequency. Therefore, a design that maintains searchable data in sorted order is appropriate.
+This approach is recommended because it provides efficient searching with logarithmic time complexity and does not require recursive function calls.
 
-## B. Evaluation of the Original Design 
-### 12.3 Suitability of Iterative Binary Search
+## 11.3 Reasons for Selecting Iterative Binary Search
 
-The original recommendation of Iterative Binary Search remains appropriate because it has a worst-case time complexity of \(O(\log n)\).
+**1. Theoretical Efficiency**
 
-For a database containing 1,000,000 records:
+The worst-case time complexity of Iterative Binary Search is:
 
 \[
-\log_2(1,000,000)\approx19.93
+T(n)=O(\log n)
 \]
 
-Therefore, approximately 20 iterations are sufficient under the usual balanced-halving analysis.
-
-In contrast, Linear Search may examine all 1,000,000 records when the required registration number is absent or located at the end of the list.
-
-### 12.4 Preprocessing Cost
-
-If the database is initially unsorted, sorting it using Merge Sort requires:
+For one million student records:
 
 \[
-P(n)=O(n\log n)
+\log_2(1,000,000)\approx 19.93
 \]
 
-After sorting, each Binary Search requires only:
+Therefore, approximately 20 iterations are sufficient under the usual balanced-halving analysis. Linear Search, in contrast, may examine all one million records.
 
-\[
-S(n)=O(\log n)
-\]
+**2. Experimental Performance**
 
-Since new records are added once per day, the university can maintain the sorted data or update it in batches. The preprocessing cost can therefore be shared across many search requests instead of repeating a full sort for every search.
+The comparison-count results from Task 9 can be used to evaluate the performance of the three algorithms. Linear Search performs up to \(n\) comparisons for an absent key, while Iterative Binary Search requires logarithmically many comparisons.
 
-### 12.5 Alternative Approach
+Iterative Binary Search also avoids the function-call overhead associated with Recursive Binary Search. The actual execution-time measurements from Task 9 should be used to confirm the observed performance on the test computer.
 
-A database index, such as a balanced B-tree index on the registration-number column, could provide better overall system performance. It supports efficient searches and allows new records to be inserted without repeatedly sorting the entire database.
+**3. Preprocessing Cost**
 
-However, for the current algorithm comparison, Iterative Binary Search remains an appropriate choice when the data is already stored in a sorted array.
+Binary Search requires the registration numbers to be sorted in ascending order. If the database is initially unsorted, sorting is necessary and introduces an additional cost. For example, comparison-based Merge Sort requires \(O(n\log n)\) time.
 
-## C. Adaptation or Redesign 
-### 12.6 Design Decision: Modify the Original Solution
+However, the university adds new records only once per day. The records can be maintained in sorted order or updated in batches, allowing the sorting or maintenance cost to be shared across many search requests.
 
-The original solution will be modified rather than completely replaced. Iterative Binary Search will remain the basic searching algorithm, while the data-maintenance strategy will be improved.
+**4. Scalability**
 
-The revised strategy is:
+The system receives 50,000 search requests per hour. Since Binary Search has logarithmic search complexity, it remains efficient as the number of student records grows from thousands to millions.
 
-1. Store student records ordered by registration number, or maintain a suitable database index.
-2. Use Iterative Binary Search on the sorted array when implementing the assignment algorithms.
-3. Add new student records through a daily update process that maintains the sorted order.
-4. Avoid sorting the entire dataset before every search request.
-5. Validate the revised implementation using the same datasets and test cases used in the earlier tasks.
+**5. Simplicity and Memory Usage**
 
-### 12.7 Effect on Computational Complexity
+Iterative Binary Search uses a loop rather than recursive function calls. Its auxiliary space complexity is \(O(1)\), making it simple to implement and efficient in memory usage.
 
-For a sorted array, Iterative Binary Search has:
+## 11.4 Comparison with Alternative Algorithms
 
-\[
-T_{\text{search}}(n)=O(\log n)
-\]
+| Factor | Linear Search | Iterative Binary Search | Recursive Binary Search |
+|---|---|---|---|
+| Worst-case time complexity | \(O(n)\) | \(O(\log n)\) | \(O(\log n)\) |
+| Sorted data required | No | Yes | Yes |
+| Auxiliary space | \(O(1)\) | \(O(1)\) | \(O(\log n)\) |
+| Function-call overhead | No recursion | No recursion | Recursive calls |
+| Suitability for large, sorted data | Less suitable | Highly suitable | Highly suitable |
 
-Its auxiliary space complexity is:
+Linear Search is useful when data is unsorted or the dataset is small. Recursive Binary Search is also efficient, but Iterative Binary Search is preferred because it avoids recursion overhead and uses constant auxiliary space.
 
-\[
-S(n)=O(1)
-\]
+## 11.5 Limitations and Trade-Offs
 
-If the database is initially unsorted and requires Merge Sort:
+Although Iterative Binary Search is efficient, it requires sorted data and is most straightforward to implement on an array or another structure that supports efficient middle-element access.
 
-\[
-T_{\text{sort}}(n)=O(n\log n)
-\]
+Maintaining sorted records when new students are added may introduce update costs. For a database with frequent insertions, deletions, or updates, a database index or balanced search tree may be more practical than repeatedly sorting an entire array.
 
-However, sorting is not repeated for every search. For a database index, search and insertion costs depend on the chosen index structure; a balanced B-tree typically supports search and insertion in \(O(\log n)\) time under standard assumptions.
+The final system design should therefore consider both search efficiency and the cost of maintaining the data structure.
 
-This modified design preserves efficient searching while reducing unnecessary preprocessing.
+## 11.6 Final Recommendation
 
-## D. Evidence-Based Defence (2 Marks)
+Iterative Binary Search is recommended for the university student-record system when the registration numbers are stored in sorted order or an appropriate indexed structure is maintained. Its logarithmic search complexity, constant auxiliary space, and lack of recursive function-call overhead make it a practical choice for frequent searches.
 
-### 12.8 Mathematical Evidence
+This recommendation is supported by the theoretical analysis in Tasks 3–7 and should be validated using the comparison counts and execution times collected in Tasks 8–10. As the database grows beyond one million records, the same approach remains efficient, provided that the cost of maintaining sorted data is properly managed.
 
-The theoretical worst-case complexities of the three proposed algorithms are:
+## 11.7 Conclusion
 
-| Algorithm | Worst-case search time | Suitability for 1,000,000 records |
-|---|---|---|
-| Linear Search | \(O(n)\) | Less suitable for frequent searches |
-| Iterative Binary Search | \(O(\log n)\) | Highly suitable for sorted data |
-| Recursive Binary Search | \(O(\log n)\) | Suitable, but uses additional stack space |
-
-For one million records, Linear Search may require up to one million element comparisons, whereas Binary Search requires approximately 20 iterations under balanced-halving analysis.
-
-### 12.9 Evidence from Search Frequency
-
-The system receives 50,000 searches per hour.
-
-\[
-\frac{50,000}{3,600}\approx13.89
-\]
-
-Therefore, the system processes approximately 13.89 search requests per second on average.
-
-Because searches are frequent and updates are infrequent, investing in maintaining sorted data or an index is justified. This reduces the cost of repeated searches.
-
-### 12.10 Experimental Evidence
-
-The comparison counts and execution times collected in Task 9 should be used to validate the theoretical analysis.
-
-The expected observation is that Linear Search comparison counts increase proportionally to dataset size, whereas the comparison counts of Iterative and Recursive Binary Search increase logarithmically.
-
-Actual execution-time measurements should be taken from the program output. They should not be assumed from theoretical complexity alone.
-
-### 12.11 Computational Trade-Offs
-
-The revised design offers the following advantages:
-
-- Fast searches for a large student database.
-- Constant auxiliary space for Iterative Binary Search on an array.
-- Lower repeated preprocessing costs when sorted data is maintained.
-- Better scalability as the number of student records increases.
-
-The main limitation is that maintaining a sorted array can make insertions expensive because elements may need to be shifted. If the database is implemented as a real production system, a database index is generally more practical than repeatedly sorting a large array.
-
-## 12.12 Final Conclusion
-
-After evaluating the changed requirements, the original recommendation is retained with a modification to the data-maintenance strategy. Iterative Binary Search remains efficient for sorted student registration numbers because it has \(O(\log n)\) worst-case search complexity and \(O(1)\) auxiliary space.
-
-The high search frequency of 50,000 requests per hour and the low update frequency of once per day justify maintaining searchable data in sorted order or using a database index. The final design balances search efficiency, preprocessing cost, memory usage, and future scalability. Experimental measurements from Task 9 should be used to confirm the expected performance on the test system.
+The analysis shows that Iterative Binary Search offers an effective balance of search speed, memory usage, and implementation simplicity. It is more suitable than Linear Search for frequent searches in a large, sorted student database and avoids the additional stack space required by Recursive Binary Search. Therefore, it is the preferred algorithm for the proposed university student-record system under the stated conditions.
