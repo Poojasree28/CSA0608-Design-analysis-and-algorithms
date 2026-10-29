@@ -1142,7 +1142,7 @@ Execution times depend on hardware and runtime, so distance-computation counts p
 
 The experiment uses `random.Random(42)`. For each batch size, points are generated using coordinates of the form `(random() × 10,000, random() × 10,000)`, with the seeded generator continuing across datasets.
 
-GRAPH
+# **GRAPHS**
 
 <img width="915" height="523" alt="image" src="https://github.com/user-attachments/assets/a45285d9-6104-49c2-b5d5-f831ef10cbe6" />
 
@@ -1155,7 +1155,7 @@ GRAPH
 | Random (1,000 alerts) | 248,414 |
 
 
-GRAPH:
+# **GRAPHS**
 
 <img width="915" height="523" alt="image" src="https://github.com/user-attachments/assets/31efe46e-de80-47b4-89e3-f6366356fba2" />
 
