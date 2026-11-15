@@ -187,14 +187,8 @@ Order Timestamps:
 ```
 
 **Output:**
-```text
-Sorted Order Timestamps:
-101, 102, 102, 103, 105, 105
+<img width="940" height="661" alt="image" src="https://github.com/user-attachments/assets/391fe4cb-4622-4223-bf36-8b21fe08766a" />
 
-Sorting Status: Successful
-Stability: Maintained
-Time Complexity: O(n log n)
-```
 
 ### Module 2 – Improved Quick Sort Output
 
