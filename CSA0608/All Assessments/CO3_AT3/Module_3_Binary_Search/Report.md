@@ -96,23 +96,8 @@ END
 
 ## 5. Flowchart
 
-The flowchart follows these steps:
+<img width="838" height="903" alt="image" src="https://github.com/user-attachments/assets/0dd83e8d-db46-434d-ae18-049af733df49" />
 
-1. START
-2. Read sorted orders.
-3. Enter search timestamp.
-4. Initialize `low = 0`, `high = n - 1`, and `result = -1`.
-5. Check whether `low <= high`.
-6. If YES, find the middle position.
-7. Compare the middle timestamp with the search timestamp.
-8. If equal, update `result = mid` and `high = mid - 1`.
-9. If smaller, update `low = mid + 1`.
-10. If greater, update `high = mid - 1`.
-11. Repeat the search.
-12. If the loop terminates, check whether `result == -1`.
-13. If YES, display Not Found.
-14. Otherwise, display the first matching order.
-15. STOP.
 
 ## 6. Complete C Program
 
@@ -245,26 +230,8 @@ int main()
 
 ## 8. Expected Output
 
-```text
-ORDER LOOKUP USING BINARY SEARCH
+<img width="940" height="439" alt="image" src="https://github.com/user-attachments/assets/252b2eea-2099-4a3c-a4e8-6e092568b305" />
 
-Enter number of sorted orders: 6
-
-Enter orders in ascending timestamp order:
-Order 1: 101 O4
-Order 2: 102 O2
-Order 3: 102 O5
-Order 4: 103 O6
-Order 5: 105 O1
-Order 6: 105 O3
-
-Enter timestamp to search: 102
-
-ORDER FOUND
-Timestamp: 102
-Order ID: O2
-First matching position: 2
-```
 
 ## 9. Execution Trace
 
