@@ -187,6 +187,7 @@ Order Timestamps:
 ```
 
 **Output:**
+
 <img width="940" height="661" alt="image" src="https://github.com/user-attachments/assets/391fe4cb-4622-4223-bf36-8b21fe08766a" />
 
 
@@ -199,14 +200,9 @@ Seller Scores:
 ```
 
 **Output:**
-```text
-Sorted Seller Scores:
-8, 17, 29, 42, 55, 63
 
-Sorting Status: Successful
-Pivot Selection: Median-of-Three
-Partitioning: Three-Way Partitioning
-```
+<img width="940" height="458" alt="image" src="https://github.com/user-attachments/assets/93a73cc6-06cd-48fd-bd7b-4f50ae7114f0" />
+
 
 ### Module 3 – First-occurrence Binary Search Output
 
