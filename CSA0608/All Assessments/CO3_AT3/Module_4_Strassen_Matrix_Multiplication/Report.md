@@ -203,18 +203,8 @@ END
 
 ## 5. Flowchart
 
-The flowchart follows these steps:
+<img width="821" height="896" alt="image" src="https://github.com/user-attachments/assets/917ccf15-309f-4c31-92a7-3e79b368c1e6" />
 
-1. START.
-2. Read Matrix A and Matrix B.
-3. Check matrix size.
-4. Check whether n = 1.
-5. If YES, multiply the single elements.
-6. If NO, divide matrices into four submatrices.
-7. Calculate seven products M1–M7.
-8. Reconstruct C11, C12, C21 and C22.
-9. Display the result matrix.
-10. STOP.
 
 ## 6. Complete C Program
 
@@ -477,24 +467,8 @@ MATRIX B:
 
 ## 8. Expected Output
 
-```text
-STRASSEN MATRIX MULTIPLICATION
+<img width="940" height="457" alt="image" src="https://github.com/user-attachments/assets/fad2084c-30e5-4ecd-964b-b84e65cdc0f4" />
 
-Enter matrix size: 2
-
-Enter Matrix A elements:
-1 7
-3 5
-
-Enter Matrix B elements:
-1 3
-7 5
-
-RESULT MATRIX C = A x B
-
-50 38
-38 34
-```
 
 ## 9. Execution Trace
 
