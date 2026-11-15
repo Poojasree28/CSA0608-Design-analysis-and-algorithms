@@ -250,3 +250,10 @@ Matrix B:
 | Module 4 | Strassen's Matrix Multiplication | Resultant Matrix Generated |
 
 All four algorithms produce the expected results and satisfy the functional requirements of the KartIQ retail analytics platform.
+
+
+
+### GRAPH
+
+<img width="983" height="652" alt="image" src="https://github.com/user-attachments/assets/33d96dc1-2e2d-47bc-a26d-47fe657af8c8" />
+
