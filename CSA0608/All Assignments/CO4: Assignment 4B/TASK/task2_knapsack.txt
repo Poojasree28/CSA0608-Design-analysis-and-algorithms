@@ -1,0 +1,93 @@
+"""Task 2: Fractional Greedy Knapsack versus 0/1 DP Knapsack."""
+
+def fractional_knapsack(items, capacity):
+    # item = (ID, weight, value)
+    ordered = sorted(items, key=lambda item: item[2] / item[1], reverse=True)
+    remaining, total, selected, work = capacity, 0.0, [], 0
+    print("\nFractional Knapsack decision sequence:")
+    for item_id, weight, value in ordered:
+        work += 1
+        if remaining <= 0:
+            break
+        fraction = min(1.0, remaining / weight)
+        taken_weight = weight * fraction
+        gained = value * fraction
+        selected.append((item_id, fraction, taken_weight, gained))
+        remaining -= taken_weight
+        total += gained
+        print(f"  {item_id}: take {fraction:.2f} ({taken_weight:g} kg), value {gained:g}")
+    print("Fractional selection:", selected)
+    print(f"Fractional optimum value = {total:g}; item inspections = {work}")
+    return total, selected, work
+
+
+def whole_item_ratio_greedy(items, capacity):
+    remaining, total, selected = capacity, 0, []
+    print("\\n0/1 ratio-greedy (whole items only):")
+    for item_id, weight, value in sorted(items, key=lambda x: x[2] / x[1], reverse=True):
+        if weight <= remaining:
+            selected.append(item_id)
+            remaining -= weight
+            total += value
+            print(f"  Commit to {item_id}: take whole item, remaining capacity={remaining}")
+        else:
+            print(f"  Skip {item_id}: weight {weight} exceeds remaining capacity {remaining}")
+    print("Greedy whole-item selection:", selected, "value =", total)
+    return total, selected
+
+def zero_one_knapsack(items, capacity):
+    n = len(items)
+    dp = [[0] * (capacity + 1) for _ in range(n + 1)]
+    transitions = 0
+    for i, (item_id, weight, value) in enumerate(items, 1):
+        for cap in range(capacity + 1):
+            transitions += 1
+            dp[i][cap] = dp[i - 1][cap]
+            if weight <= cap:
+                dp[i][cap] = max(dp[i][cap],
+                                 value + dp[i - 1][cap - weight])
+
+    chosen, cap = [], capacity
+    for i in range(n, 0, -1):
+        if dp[i][cap] != dp[i - 1][cap]:
+            item = items[i - 1]
+            chosen.append(item)
+            cap -= item[1]
+    chosen.reverse()
+    print("\n0/1 Knapsack DP table (rows = items, columns = capacity):")
+    for row in dp:
+        print(row)
+    print("Selected whole items:", chosen)
+    print("0/1 optimum value =", dp[n][capacity])
+    print("DP states/transitions =", transitions)
+    return dp[n][capacity], chosen, transitions
+
+def main():
+    print("TASK 2 – GREEDY VS DYNAMIC PROGRAMMING")
+    normal = [("A", 10, 60), ("B", 20, 100), ("C", 30, 120)]
+    print("\nNORMAL CASE: capacity = 50")
+    fractional_knapsack(normal, 50)
+    zero_one_knapsack(normal, 50)
+
+    print("\nCOUNTEREXAMPLE: capacity = 50")
+    # Highest ratio is A (6), then B (5), then C (4).
+    # Greedy takes A+B = 220, while optimal 0/1 choice is B+C = 240.
+    trap = [("A", 10, 60), ("B", 20, 100), ("C", 30, 140)]
+    print("Greedy ratio order:", sorted(
+        trap, key=lambda x: x[2] / x[1], reverse=True))
+    print("First greedy commitment: taking A (10 kg) leaves 40 kg,")
+    print("so B fits but C does not; A+B gives 160 in this dataset.")
+    print("The DP solution can instead choose B+C for value 240.")
+    whole_item_ratio_greedy(trap, 50)
+    fractional_knapsack(trap, 50)
+    zero_one_knapsack(trap, 50)
+
+    print("\nENGINEERING COMPARISON")
+    print("Fractional: sorting plus one pass; O(n log n) time, O(n) ordering space;")
+    print("optimal for divisible items. 0/1 DP: O(nW) time and O(nW) table space;")
+    print("optimal for integer weights/capacity, but pseudo-polynomial.")
+    print("For an urgent near-optimal decision, ratio-greedy is fast, but")
+    print("the accepted trade-off is loss of the 0/1 optimality guarantee.")
+
+if __name__ == "__main__":
+    main()

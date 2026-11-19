@@ -1,0 +1,68 @@
+"""Task 1: Word Wrap using Dynamic Programming."""
+from math import inf
+
+WORDS = "Dynamic programming helps arrange words into balanced document lines".split()
+BASE_WIDTH = 16
+
+def word_wrap(words, width, show_dp=True):
+    n = len(words)
+    dp = [inf] * (n + 1)
+    nxt = [-1] * (n + 1)
+    dp[n] = 0  # no penalty after the final word
+
+    # Work backwards: dp[i] is the minimum penalty from word i onwards.
+    for i in range(n - 1, -1, -1):
+        used = 0
+        for j in range(i, n):
+            used += len(words[j]) + (1 if j > i else 0)
+            if used > width:
+                break
+            unused = width - used
+            # Final line has no penalty.
+            line_penalty = 0 if j == n - 1 else unused ** 2
+            candidate = line_penalty + dp[j + 1]
+            if candidate < dp[i]:
+                dp[i], nxt[i] = candidate, j + 1
+
+    if nxt[0] == -1:
+        raise ValueError("A word is wider than the selected line width.")
+
+    lines, start = [], 0
+    while start < n:
+        end = nxt[start]
+        line_words = words[start:end]
+        used = sum(map(len, line_words)) + len(line_words) - 1
+        unused = width - used
+        penalty = 0 if end == n else unused ** 2
+        lines.append((line_words, unused, penalty))
+        start = end
+
+    print(f"\nLINE WIDTH = {width}")
+    print("Minimum total penalty:", dp[0])
+    print("DP states (dp[i] = minimum remaining penalty from word i):")
+    for i, value in enumerate(dp):
+        print(f"  dp[{i}] ({words[i] if i < n else 'END'}) = {value}")
+    print("\nChosen layout:")
+    for number, (line, unused, penalty) in enumerate(lines, 1):
+        print(f"  Line {number}: {' '.join(line)}")
+        print(f"    Unused spaces = {unused}; line penalty = {penalty}")
+    return dp[0], lines
+
+def main():
+    print("TASK 1 – WORD WRAP DP")
+    print("Input words:", " ".join(WORDS))
+    for width in (14, 16, 20):
+        print(f"\nPrediction before width {width}:")
+        print("  Arrangement may change compared with the previous width.")
+        print("  A wider line is expected to reduce or preserve minimum penalty.")
+        word_wrap(WORDS, width)
+
+    print("\nBOUNDARY TEST")
+    print("A word longer than the line width must be rejected.")
+    try:
+        word_wrap(["tiny", "extraordinary"], 8)
+    except ValueError as error:
+        print("Boundary test detected:", error)
+
+if __name__ == "__main__":
+    main()
