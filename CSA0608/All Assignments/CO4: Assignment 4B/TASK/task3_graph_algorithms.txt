@@ -1,0 +1,129 @@
+"""Task 3: Dijkstra, Bellman-Ford, Floyd-Warshall and Warshall."""
+from math import inf
+
+VERTICES = list("ABCDEFGH")
+EDGES = [
+    ("A", "B", 4), ("A", "C", 5), ("B", "C", 1), ("B", "D", 5),
+    ("C", "D", 2), ("C", "E", 6), ("D", "E", 1), ("D", "F", 4),
+    ("E", "F", 2), ("E", "G", 5), ("F", "G", 1), ("G", "H", 3),
+    ("F", "H", 6), ("B", "H", 12)
+]
+
+def dijkstra(vertices, edges, source):
+    graph = {v: [] for v in vertices}
+    for u, v, w in edges:
+        if w < 0:
+            raise ValueError("Dijkstra cannot process negative edge weights.")
+        graph[u].append((v, w))
+    dist = {v: inf for v in vertices}
+    pred = {v: None for v in vertices}
+    dist[source] = 0
+    unvisited, order = set(vertices), []
+    while unvisited:
+        u = min(unvisited, key=lambda x: dist[x])
+        if dist[u] == inf:
+            break
+        unvisited.remove(u)
+        order.append(u)
+        for v, w in graph[u]:
+            if v in unvisited and dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+                pred[v] = u
+    return dist, pred, order
+
+def reconstruct_path(pred, target):
+    path = []
+    while target is not None:
+        path.append(target)
+        target = pred[target]
+    return list(reversed(path))
+
+def bellman_ford(vertices, edges, source):
+    directed = []
+    for u, v, w in edges:
+        directed.append((u, v, w))
+    dist = {v: inf for v in vertices}
+    pred = {v: None for v in vertices}
+    dist[source] = 0
+    for _ in range(len(vertices) - 1):
+        changed = False
+        for u, v, w in directed:
+            if dist[u] != inf and dist[u] + w < dist[v]:
+                dist[v], pred[v], changed = dist[u] + w, u, True
+        if not changed:
+            break
+    for u, v, w in directed:
+        if dist[u] != inf and dist[u] + w < dist[v]:
+            return dist, pred, True
+    return dist, pred, False
+
+def floyd_warshall(vertices, edges):
+    d = {u: {v: (0 if u == v else inf) for v in vertices} for u in vertices}
+    for u, v, w in edges:
+        d[u][v] = min(d[u][v], w)
+    for k in vertices:
+        for i in vertices:
+            for j in vertices:
+                d[i][j] = min(d[i][j], d[i][k] + d[k][j])
+    return d
+
+def warshall(vertices, edges):
+    r = {u: {v: (u == v) for v in vertices} for u in vertices}
+    for u, v, _ in edges:
+        r[u][v] = True
+    for k in vertices:
+        for i in vertices:
+            for j in vertices:
+                r[i][j] = r[i][j] or (r[i][k] and r[k][j])
+    return r
+
+def print_matrix(matrix, vertices, label):
+    print("\n" + label)
+    print("    " + " ".join(f"{v:>5}" for v in vertices))
+    for u in vertices:
+        print(f"{u:>3} " + " ".join(
+            f"{matrix[u][v]:>5}" if matrix[u][v] != inf else f"{'∞':>5}"
+            for v in vertices))
+
+def main():
+    print("TASK 3 – ROUTING ENGINE")
+    print("Vertices:", VERTICES)
+    print("Directed edges:", EDGES)
+    dist, pred, order = dijkstra(VERTICES, EDGES, "A")
+    print("\nSTAGE A – DIJKSTRA from A")
+    print("Finalisation order:", order)
+    for v in VERTICES:
+        print(f"A to {v}: distance={dist[v]}, path={' -> '.join(reconstruct_path(pred, v))}")
+    print("Predecessors:", pred)
+
+    print("\nSTAGE B – NEGATIVE EDGE")
+    modified = [e for e in EDGES if not (e[0] == "C" and e[1] == "D")] + [("C", "D", -4)]
+    print("Prediction: Dijkstra's non-negative-edge assumption is broken;")
+    print("the C-D route may improve paths through C and D.")
+    try:
+        dijkstra(VERTICES, modified, "A")
+    except ValueError as error:
+        print("Dijkstra correctly rejects modified graph:", error)
+    bd, bp, cycle = bellman_ford(VERTICES, modified, "A")
+    print("Bellman-Ford negative cycle detected:", cycle)
+    for v in VERTICES:
+        print(f"A to {v}: distance={bd[v]}, path={' -> '.join(reconstruct_path(bp, v))}")
+
+    print("\nSTAGE C – REACHABLE NEGATIVE CYCLE")
+    # Add a return edge so A -> ... -> H -> A forms a reachable negative cycle.
+    cycle_graph = modified + [("H", "A", -20), ("A", "H", 1)]
+    cd, cp, has_cycle = bellman_ford(VERTICES, cycle_graph, "A")
+    print("Negative cycle detected:", has_cycle)
+    if has_cycle:
+        print("Shortest paths are undefined because a reachable negative cycle exists.")
+
+    print("\nSTAGE D – ALL-PAIRS COST AND REACHABILITY")
+    print_matrix(floyd_warshall(VERTICES, EDGES), VERTICES, "Floyd-Warshall distance matrix")
+    reach = warshall(VERTICES, EDGES)
+    print("\nWarshall reachability matrix (1=True, 0=False)")
+    print("    " + " ".join(f"{v:>3}" for v in VERTICES))
+    for u in VERTICES:
+        print(f"{u:>3} " + " ".join(f"{int(reach[u][v]):>3}" for v in VERTICES))
+
+if __name__ == "__main__":
+    main()

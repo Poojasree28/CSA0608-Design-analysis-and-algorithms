@@ -1,0 +1,115 @@
+"""Task 5: Kruskal, Prim and Boruvka Minimum Spanning Tree algorithms."""
+
+VERTICES = list("ABCDEFGH")
+EDGES = [
+    ("A", "B", 4), ("A", "C", 3), ("B", "C", 1), ("B", "D", 5),
+    ("C", "D", 4), ("C", "E", 6), ("D", "E", 2), ("D", "F", 7),
+    ("E", "F", 3), ("E", "G", 5), ("F", "G", 2), ("F", "H", 6),
+    ("G", "H", 4), ("B", "H", 9)
+]
+
+class DSU:
+    def __init__(self, vertices):
+        self.parent = {v: v for v in vertices}
+        self.rank = {v: 0 for v in vertices}
+    def find(self, x):
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])
+        return self.parent[x]
+    def union(self, a, b):
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb:
+            return False
+        if self.rank[ra] < self.rank[rb]:
+            ra, rb = rb, ra
+        self.parent[rb] = ra
+        if self.rank[ra] == self.rank[rb]:
+            self.rank[ra] += 1
+        return True
+
+def report(name, chosen):
+    print(f"\n{name} selection trace:")
+    for edge in chosen:
+        print("  select", edge)
+    print("MST edges:", chosen)
+    print("Total cost:", sum(w for _, _, w in chosen))
+
+def kruskal(vertices, edges):
+    dsu, chosen = DSU(vertices), []
+    for u, v, w in sorted(edges, key=lambda e: e[2]):
+        if dsu.union(u, v):
+            chosen.append((u, v, w))
+            if len(chosen) == len(vertices) - 1:
+                break
+    report("Kruskal", chosen)
+    return chosen
+
+def prim(vertices, edges, start="A"):
+    graph = {v: [] for v in vertices}
+    for u, v, w in edges:
+        graph[u].append((v, w))
+        graph[v].append((u, w))
+    visited, chosen = {start}, []
+    while len(visited) < len(vertices):
+        candidates = [(w, u, v) for u in visited for v, w in graph[u] if v not in visited]
+        if not candidates:
+            raise ValueError("Graph is disconnected.")
+        w, u, v = min(candidates)
+        chosen.append((u, v, w))
+        visited.add(v)
+    report("Prim", chosen)
+    return chosen
+
+def boruvka(vertices, edges):
+    dsu, chosen = DSU(vertices), []
+    while len(chosen) < len(vertices) - 1:
+        cheapest = {}
+        for u, v, w in edges:
+            ru, rv = dsu.find(u), dsu.find(v)
+            if ru != rv:
+                if ru not in cheapest or w < cheapest[ru][2]:
+                    cheapest[ru] = (u, v, w)
+                if rv not in cheapest or w < cheapest[rv][2]:
+                    cheapest[rv] = (u, v, w)
+        added = 0
+        for edge in cheapest.values():
+            u, v, w = edge
+            if dsu.union(u, v):
+                chosen.append(edge)
+                added += 1
+                print("Boruvka safe edge:", edge)
+        if added == 0:
+            raise ValueError("Graph is disconnected.")
+    report("Boruvka", chosen)
+    return chosen
+
+def main():
+    print("TASK 5 – THREE GREEDY MST ENGINEERS")
+    print("Vertices:", VERTICES)
+    print("Weighted edges:", EDGES)
+    k = kruskal(VERTICES, EDGES)
+    p = prim(VERTICES, EDGES)
+    b = boruvka(VERTICES, EDGES)
+    print("\nComparison: all three should produce an MST of the same minimum cost.")
+    print("Kruskal maintains sorted edges and disjoint sets.")
+    print("Prim maintains the visited tree and cheapest crossing edge.")
+    print("Boruvka maintains components and each component's cheapest outgoing edge.")
+
+    print("\nMULTIPLE MST TEST")
+    # A 4-cycle with equal weights has multiple valid MST edge sets.
+    equal_edges = [("A", "B", 1), ("B", "C", 1),
+                   ("C", "D", 1), ("D", "A", 1), ("A", "C", 2)]
+    print("Equal-weight cycle edges:", equal_edges)
+    print("Different algorithms/tie-breaking may choose different 3-edge sets.")
+    kruskal(list("ABCD"), equal_edges)
+    prim(list("ABCD"), equal_edges, "A")
+    boruvka(list("ABCD"), equal_edges)
+
+    print("\nDEPLOYMENT DECISION")
+    print("Sparse: Kruskal is attractive when sorting a relatively small edge list is practical.")
+    print("Dense: Prim with an adjacency matrix can be effective because many edges exist.")
+    print("Distributed: Boruvka is useful because components independently choose cheapest")
+    print("outgoing edges in rounds, allowing parallel processing and component reduction.")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,119 @@
+"""Task 6: Travelling Salesperson Problem using Held-Karp Dynamic Programming."""
+from itertools import permutations
+from time import perf_counter
+
+def tsp_dp(cost):
+    # Vertex 0 is the hub; delivery locations are 1..n-1.
+    n = len(cost)
+    if n < 2 or any(len(row) != n for row in cost):
+        raise ValueError("Cost matrix must be square and contain a hub and a delivery.")
+    # dp[(mask, j)] = minimum hub-to-j cost visiting exactly mask of delivery nodes.
+    dp, parent = {}, {}
+    for j in range(1, n):
+        mask = 1 << (j - 1)
+        dp[(mask, j)] = cost[0][j]
+        parent[(mask, j)] = 0
+
+    states = len(dp)
+    for mask in range(1, 1 << (n - 1)):
+        for j in range(1, n):
+            bit = 1 << (j - 1)
+            if not (mask & bit) or (mask, j) in dp:
+                continue
+            previous_mask = mask ^ bit
+            best, best_prev = float("inf"), None
+            for k in range(1, n):
+                if previous_mask & (1 << (k - 1)):
+                    candidate = dp[(previous_mask, k)] + cost[k][j]
+                    if candidate < best:
+                        best, best_prev = candidate, k
+            dp[(mask, j)] = best
+            parent[(mask, j)] = best_prev
+            states += 1
+
+    full = (1 << (n - 1)) - 1
+    best_cost, last = min((dp[(full, j)] + cost[j][0], j)
+                          for j in range(1, n))
+    route = [last]
+    mask, current = full, last
+    while current != 0:
+        previous = parent[(mask, current)]
+        mask ^= 1 << (current - 1)
+        current = previous
+        if current != 0:
+            route.append(current)
+    route.reverse()
+    return best_cost, [0] + route + [0], states, dp
+
+def exhaustive_tsp(cost):
+    n = len(cost)
+    best = float("inf")
+    best_route = None
+    for order in permutations(range(1, n)):
+        route = (0,) + order + (0,)
+        total = sum(cost[route[i]][route[i+1]] for i in range(n))
+        if total < best:
+            best, best_route = total, route
+    return best, best_route
+
+def make_matrix(n):
+    # Deterministic symmetric costs; node 0 is the hub.
+    return [[0 if i == j else 2 + ((i * 7 + j * 11 + i * j) % 19)
+             for j in range(n)] for i in range(n)]
+
+def main():
+    print("TASK 6 – DELIVERY TSP USING DP")
+    names = ["Hub", "A", "B", "C", "D", "E", "F"]
+    cost = make_matrix(len(names))
+    print("\nCost matrix:")
+    print("      " + " ".join(f"{x:>5}" for x in names))
+    for name, row in zip(names, cost):
+        print(f"{name:>5} " + " ".join(f"{x:5}" for x in row))
+
+    optimum, route, states, table = tsp_dp(cost)
+    print("\nMinimum travel cost:", optimum)
+    print("Optimal route:", " -> ".join(names[i] for i in route))
+    print("Visit order:", [names[i] for i in route[1:-1]])
+    print("Return to hub:", names[route[-1]])
+    print("DP states stored:", states)
+    print("State meaning: dp[(mask,j)] is the minimum cost to start at hub,")
+    print("visit exactly the locations in mask, and finish at location j.")
+
+    print("\nVALIDATION – HUB + FOUR DELIVERY LOCATIONS")
+    small = make_matrix(5)
+    dp_cost, dp_route, small_states, _ = tsp_dp(small)
+    brute_cost, brute_route = exhaustive_tsp(small)
+    print("DP result:", dp_cost, dp_route)
+    print("Exhaustive result:", brute_cost, brute_route)
+    print("Validation passed:", dp_cost == brute_cost)
+
+    print("\nSTATE-SPACE EXPERIMENT")
+    print("Locations | DP states | Time (seconds)")
+    for deliveries in range(4, 9):
+        matrix = make_matrix(deliveries + 1)
+        start = perf_counter()
+        _, _, count, _ = tsp_dp(matrix)
+        elapsed = perf_counter() - start
+        print(f"{deliveries:9} | {count:9} | {elapsed:.6f}")
+    print("DP avoids repeated route-prefix calculations, but still has")
+    print("O(n * 2^n) states/transitions (Held-Karp), so subsets grow exponentially.")
+
+    print("\nBUSINESS REQUIREMENT – 200 LOCATIONS")
+    print("Exact DP is impractical because the subset count is exponential.")
+    print("The requirement changed from guaranteed optimality to fast near-optimal output.")
+    print("Investigate nearest-neighbour followed by 2-opt/local-search improvement,")
+    print("or other heuristics/metaheuristics. Trade-off: speed and scalability")
+    print("are gained, but global optimality is no longer guaranteed.")
+
+    print("\nTECHNICAL REFLECTION")
+    print("Dynamic Programming is better than enumerating every complete route because")
+    print("it reuses the best cost for each visited-subset/current-location state.")
+    print("However, the number of subsets is still exponential. In this implementation,")
+    print("the state count rises as delivery locations increase, even though repeated")
+    print("subproblems are removed. The measured state/time table demonstrates this growth.")
+    print("Therefore DP improves exhaustive search but does not make TSP scalable to")
+    print("hundreds of locations. For 200 locations, a fast heuristic may be more suitable")
+    print("when the business accepts a high-quality route without an optimality guarantee.")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,70 @@
+"""Task 4: Two-line assembly scheduling DP with route reconstruction."""
+
+def assembly_schedule(a1, a2, t1, t2, entry, exit_time, verbose=True):
+    n = len(a1)
+    if n == 0 or len(a2) != n or len(t1) != n - 1 or len(t2) != n - 1:
+        raise ValueError("Invalid station/transfer array lengths.")
+    f1, f2 = [0] * n, [0] * n
+    parent1, parent2 = [None] * n, [None] * n
+    f1[0], f2[0] = entry[0] + a1[0], entry[1] + a2[0]
+    if verbose:
+        print(f"Station 1: Line 1={f1[0]}, Line 2={f2[0]} (entry + processing)")
+    for j in range(1, n):
+        stay1 = f1[j-1] + a1[j]
+        transfer1 = f2[j-1] + t2[j-1] + a1[j]
+        f1[j] = min(stay1, transfer1)
+        parent1[j] = 1 if stay1 <= transfer1 else 2
+
+        stay2 = f2[j-1] + a2[j]
+        transfer2 = f1[j-1] + t1[j-1] + a2[j]
+        f2[j] = min(stay2, transfer2)
+        parent2[j] = 2 if stay2 <= transfer2 else 1
+
+        if verbose:
+            print(f"Station {j+1}:")
+            print(f"  Reach L1: stay={stay1}, transfer={transfer1}; choose L{parent1[j]}")
+            print(f"  Reach L2: stay={stay2}, transfer={transfer2}; choose L{parent2[j]}")
+    finish1, finish2 = f1[-1] + exit_time[0], f2[-1] + exit_time[1]
+    line = 1 if finish1 <= finish2 else 2
+    total = min(finish1, finish2)
+    route = [0] * n
+    route[-1] = line
+    for j in range(n - 1, 0, -1):
+        route[j-1] = parent1[j] if route[j] == 1 else parent2[j]
+    print("Minimum production time:", total)
+    print("Optimal route:", "Entry -> " + " -> ".join(
+        f"Line {route[i]} - Station {i+1}" for i in range(n)) + " -> Exit")
+    print("Transfer points:", [f"before station {i+1}" for i in range(1, n)
+                              if route[i] != route[i-1]] or "None")
+    return total, route
+
+def main():
+    a1 = [7, 9, 3, 4, 8, 4]
+    a2 = [8, 5, 6, 4, 5, 7]
+    t1 = [2, 3, 1, 3, 4]  # L1 -> L2
+    t2 = [2, 1, 2, 2, 1]  # L2 -> L1
+    entry, exit_time = [2, 4], [3, 2]
+    print("TASK 4 – ASSEMBLY LINE SCHEDULING")
+    print("\nBASE CASE")
+    assembly_schedule(a1, a2, t1, t2, entry, exit_time)
+
+    print("\n4.3 PREDICTION – increase transfer L1->L2 before station 4")
+    changed_t1 = t1[:]
+    changed_t1[2] += 20
+    print("Prediction: a route using this transfer may change; total time cannot decrease.")
+    assembly_schedule(a1, a2, changed_t1, t2, entry, exit_time)
+
+    print("\n4.4 PRODUCTION DISRUPTION – Line 1 station 3 becomes slower")
+    slower_a1 = a1[:]
+    slower_a1[2] += 15
+    print("Prediction: DP may switch to Line 2 to avoid the slower station.")
+    assembly_schedule(slower_a1, a2, t1, t2, entry, exit_time)
+
+    print("\n4.5 THREE-LINE EXTENSION")
+    print("Use dp[line][station] for each of the three lines.")
+    print("For each destination line, compare staying on that line with transfers")
+    print("from each of the other two lines, adding the relevant transfer cost.")
+    print("Store the selected predecessor line for every state to reconstruct the route.")
+
+if __name__ == "__main__":
+    main()
