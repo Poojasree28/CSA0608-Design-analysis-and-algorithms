@@ -1,0 +1,88 @@
+
+def word_break_faulty(text, dictionary):
+    n = len(text)
+    dp = [False] * (n + 1)
+    dp[0] = True
+
+    for i in range(1, n + 1):
+        for j in range(i):
+            if text[j:i] in dictionary:
+                dp[i] = True
+                break
+
+    return dp[n], dp
+
+
+def word_break_fixed(text, dictionary):
+    n = len(text)
+    dp = [False] * (n + 1)
+    dp[0] = True
+
+    for i in range(1, n + 1):
+        for j in range(i):
+            if dp[j] and text[j:i] in dictionary:
+                dp[i] = True
+                break
+
+    return dp[n], dp
+
+
+def run_test(title, text, dictionary, expected):
+    print("\n", title)
+    print("Text:", text)
+    print("Dictionary:", dictionary)
+
+    faulty, faulty_dp = word_break_faulty(
+        text, dictionary
+    )
+
+    fixed, fixed_dp = word_break_fixed(
+        text, dictionary
+    )
+
+    print("Faulty DP:", faulty_dp)
+    print("Faulty Result:", faulty)
+
+    print("Repaired DP:", fixed_dp)
+    print("Repaired Result:", fixed)
+
+    print("Expected Result:", expected)
+    print("Repair Correct:", fixed == expected)
+
+
+if __name__ == "__main__":
+
+    run_test(
+        "TASK 4.2: Failing Input",
+        "abcd",
+        {"cd"},
+        False
+    )
+
+    run_test(
+        "TASK 4.4: Regression Test",
+        "applepen",
+        {"apple", "pen"},
+        True
+    )
+
+    run_test(
+        "EXTRA TEST 1",
+        "xyz",
+        {"a", "b"},
+        False
+    )
+
+    run_test(
+        "EXTRA TEST 2",
+        "leetcode",
+        {"leet", "code"},
+        True
+    )
+
+    run_test(
+        "EXTRA TEST 3",
+        "catsandog",
+        {"cats", "dog", "sand", "and", "cat"},
+        False
+    )
