@@ -1,0 +1,58 @@
+
+def load_vehicle(packages, capacity):
+    if capacity < 0:
+        raise ValueError("Capacity must be non-negative")
+
+    for pid, weight, value in packages:
+        if weight <= 0 or value < 0:
+            raise ValueError("Invalid package details")
+
+    items = [(pid, w, v, v / w) for pid, w, v in packages]
+    items.sort(key=lambda x: (-x[3], x[1]))
+
+    remaining = capacity
+    total = 0.0
+    plan = []
+
+    print("\nPackage Details")
+    print("ID\tWeight\tValue\tRatio")
+
+    for pid, w, v, ratio in items:
+        print(pid, "\t", w, "\t", v, "\t", round(ratio, 2))
+
+    print("\nGreedy Selection")
+
+    for pid, w, v, ratio in items:
+        if remaining == 0:
+            break
+
+        if w <= remaining:
+            fraction = 1.0
+            loaded = w
+        else:
+            fraction = remaining / w
+            loaded = remaining
+
+        gain = fraction * v
+        remaining -= loaded
+        total += gain
+        plan.append((pid, fraction))
+
+        print("Package:", pid)
+        print("Fraction:", round(fraction, 3))
+        print("Loaded weight:", loaded)
+        print("Value gained:", round(gain, 2))
+        print("Remaining capacity:", remaining)
+
+    print("\nMaximum value:", round(total, 2))
+    print("Loading plan:", plan)
+
+
+if __name__ == "__main__":
+    packages = [
+        ("P1", 10, 60),
+        ("P2", 20, 100),
+        ("P3", 30, 120)
+    ]
+
+    load_vehicle(packages, 50)
