@@ -1,0 +1,224 @@
+"""
+Task B1 - Instrumented Backtracking for Graph Colouring (Cloud-Service Deployment)
+
+CSA06 Design and Analysis of Algorithms - CO5
+
+Vertex = service, edge = conflict, colour = server group (1..k).
+
+Two search strategies share ONE backtracking routine; only SELECT-NEXT differs:
+    Version 1 ("input")  : vertices in original input order 0,1,2,...
+    Version 2 ("dsatur") : dynamic ordering - pick the uncoloured vertex whose
+                           neighbours already use the MOST distinct colours
+                           (fewest remaining options); ties -> highest degree,
+                           then lowest index.
+
+Instrumentation (all counted inside the search, not estimated):
+    nodes      - calls of BACKTRACK (search-tree nodes visited)
+    attempts   - (vertex, colour) candidate assignments tried
+    rejected   - candidates rejected by the feasibility test
+    backtracks - UNDO operations (child returned failure, assignment retracted)
+    max_depth  - largest number of vertices simultaneously assigned
+"""
+
+import json
+import sys
+from dataclasses import dataclass, field
+
+sys.setrecursionlimit(10000)
+
+
+@dataclass
+class Stats:
+    nodes: int = 0
+    attempts: int = 0
+    rejected: int = 0
+    backtracks: int = 0
+    max_depth: int = 0
+
+    def row(self):
+        return (self.nodes, self.attempts, self.rejected, self.backtracks, self.max_depth)
+
+
+def build_adjacency(n, edges):
+    """Validate input and build adjacency lists."""
+    if n < 0:
+        raise ValueError("number of vertices must be >= 0")
+    adj = [set() for _ in range(n)]
+    for u, v in edges:
+        if not (0 <= u < n and 0 <= v < n):
+            raise ValueError(f"edge ({u},{v}) refers to a vertex outside 0..{n - 1}")
+        if u == v:
+            raise ValueError(f"self-loop ({u},{u}) is invalid: a service cannot conflict with itself")
+        adj[u].add(v)
+        adj[v].add(u)
+    return adj
+
+
+def select_next(strategy, n, adj, colour):
+    """SELECT-NEXT-SERVICE: returns the uncoloured vertex to branch on."""
+    if strategy == "input":
+        for v in range(n):
+            if colour[v] == 0:
+                return v
+        return -1
+
+    # DSATUR: most saturated (distinct neighbour colours), tie -> larger degree, tie -> smaller index
+    best, best_key = -1, None
+    for v in range(n):
+        if colour[v] != 0:
+            continue
+        sat = len({colour[u] for u in adj[v] if colour[u] != 0})
+        key = (sat, len(adj[v]), -v)
+        if best_key is None or key > best_key:
+            best, best_key = v, key
+    return best
+
+
+def colour_graph(n, edges, k, strategy="input", trace=None, labels=None):
+    """Return (colouring or None, Stats). `trace` is an optional list collecting trace lines."""
+    adj = build_adjacency(n, edges)
+    colour = [0] * n
+    stats = Stats()
+    name = (lambda v: labels[v]) if labels else (lambda v: f"v{v}")
+
+    def log(depth, text):
+        if trace is not None:
+            trace.append("  " * depth + text)
+
+    def backtrack(depth):                       # depth = number of vertices assigned
+        stats.nodes += 1
+        stats.max_depth = max(stats.max_depth, depth)
+
+        if depth == n:                          # goal: every service assigned
+            log(depth, "GOAL: all services assigned -> SUCCESS")
+            return True
+
+        v = select_next(strategy, n, adj, colour)             # CHOOSE
+        log(depth, f"[node {stats.nodes}] CHOOSE {name(v)}")
+
+        for c in range(1, k + 1):                              # candidate server groups
+            stats.attempts += 1
+            clash = [u for u in adj[v] if colour[u] == c]      # CHECK (feasibility test)
+
+            if clash:
+                stats.rejected += 1
+                log(depth, f"  try {name(v)}={c}: CHECK fails (conflicts with {name(clash[0])}) -> REJECT")
+                continue
+
+            colour[v] = c                                      # ASSIGN
+            log(depth, f"  try {name(v)}={c}: CHECK ok -> ASSIGN, EXPLORE")
+
+            if backtrack(depth + 1):                           # EXPLORE
+                return True
+
+            colour[v] = 0                                      # UNDO
+            stats.backtracks += 1
+            log(depth, f"  BACKTRACK: undo {name(v)}={c}")
+
+        log(depth, f"  no colour left for {name(v)} -> FAIL, return to parent")
+        return False
+
+    ok = backtrack(0)
+    return (list(colour) if ok else None), stats
+
+
+def is_valid_colouring(n, edges, k, colour):
+    return (colour is not None and len(colour) == n
+            and all(1 <= c <= k for c in colour)
+            and all(colour[u] != colour[v] for u, v in edges))
+
+
+def fmt_row(label, s):
+    return f"{label:<38}{s.nodes:>9}{s.attempts:>11}{s.rejected:>10}{s.backtracks:>11}{s.max_depth:>7}"
+
+
+def run_tests(data):
+    print("=" * 96)
+    print("B1.1  VALIDATION TEST SUITE  (Version 1 = input order)")
+    print("=" * 96)
+    passed = 0
+
+    for t in data["tests"]:
+        print(f"\n{t['name']}")
+        print(f"  purpose : {t['purpose']}")
+        print(f"  input   : n={t['n']}, |E|={len(t['edges'])}, k={t['k']}   expected: {t['expected']}")
+
+        try:
+            col, s = colour_graph(t["n"], t["edges"], t["k"], "input")
+        except ValueError as e:
+            actual = "error"
+            print(f"  actual  : error -> {e}")
+        else:
+            actual = "colourable" if col is not None else "not colourable"
+            if col is not None:
+                assert is_valid_colouring(t["n"], t["edges"], t["k"], col), "INVALID COLOURING"
+            print(f"  actual  : {actual}")
+            print(f"  colouring: {col}")
+            print(f"  stats   : nodes={s.nodes} attempts={s.attempts} rejected={s.rejected} "
+                  f"backtracks={s.backtracks} max_depth={s.max_depth}")
+
+        ok = actual == t["expected"]
+        passed += ok
+        print(f"  RESULT  : {'PASS' if ok else 'FAIL'}")
+
+    print(f"\nSummary: {passed}/{len(data['tests'])} tests passed")
+
+
+def run_comparison(data):
+    print("\n" + "=" * 96)
+    print("B1.3 / B1.4  VERSION 1 (input order)  vs  VERSION 2 (DSATUR-style dynamic order)")
+    print("=" * 96)
+
+    hdr = f"{'Graph / Version':<38}{'Nodes':>9}{'Attempts':>11}{'Rejected':>10}{'Backtracks':>11}{'Depth':>7}"
+    tot = {"input": [0] * 5, "dsatur": [0] * 5}
+
+    for g in data["compare"]:
+        print(f"\n{g['name']}  (n={g['n']}, |E|={len(g['edges'])}, k={g['k']})")
+        print(hdr)
+
+        for strat, lab in (("input", "  Version 1 (input order)"), ("dsatur", "  Version 2 (DSATUR order)")):
+            col, s = colour_graph(g["n"], g["edges"], g["k"], strat)
+
+            if col is not None:
+                assert is_valid_colouring(g["n"], g["edges"], g["k"], col)
+
+            print(fmt_row(lab, s), "  ->", "colourable" if col else "NOT colourable")
+
+            for i, x in enumerate(s.row()):
+                tot[strat][i] += x
+
+    print("\nTOTALS over all comparison graphs")
+    print(hdr)
+
+    for strat, lab in (("input", "  Version 1 (input order)"), ("dsatur", "  Version 2 (DSATUR order)")):
+        print(fmt_row(lab, Stats(*tot[strat])))
+
+    r = [round(100 * (1 - b / a), 1) if a else 0 for a, b in zip(tot["input"], tot["dsatur"])]
+    print(f"\nReduction by Version 2: nodes {r[0]}%, attempts {r[1]}%, rejected {r[2]}%, backtracks {r[3]}%")
+
+
+def run_trace(data):
+    g = data["trace_graph"]
+
+    print("\n" + "=" * 96)
+    print("A1.5  SEARCH TRACE  (Version 1), k =", g["k"])
+    print("  services :", g["labels"])
+    print("  conflicts:", ", ".join(f"{g['labels'][u]}-{g['labels'][v]}" for u, v in g["edges"]))
+    print("=" * 96)
+
+    trace = []
+    col, s = colour_graph(g["n"], g["edges"], g["k"], "input", trace=trace, labels=g["labels"])
+
+    print("\n".join(trace))
+    print("Final colouring:", {g["labels"][i]: c for i, c in enumerate(col)} if col else None)
+    print(f"Stats: nodes={s.nodes} attempts={s.attempts} rejected={s.rejected} "
+          f"backtracks={s.backtracks} max_depth={s.max_depth}")
+
+
+if __name__ == "__main__":
+    with open("input_data.json") as f:
+        data = json.load(f)
+
+    run_tests(data)
+    run_comparison(data)
+    run_trace(data)
