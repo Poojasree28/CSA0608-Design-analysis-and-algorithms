@@ -1,0 +1,134 @@
+"""
+Task B4 - Bin packing under a production constraint (cloud workload placement).
+ 
+PLACEMENT RULE USED: First Fit Decreasing (FFD)
+    1. Sort workloads by resource demand, largest first.
+    2. Place each workload on the lowest-numbered server that still has enough remaining capacity.
+    3. If no open server fits, open a new server.
+The 'lowest-numbered server that fits' query is answered by a max segment tree in O(log n),
+so thousands of workloads are placed in well under a second.
+"""
+import json
+import time
+from bp_core import (first_fit, first_fit_decreasing, next_fit, exact_min_bins,
+                     random_workloads, validate)
+ 
+ 
+def bell(n):
+    """Bell number via the Bell triangle."""
+    row = [1]
+    for _ in range(n - 1):
+        new = [row[-1]]
+        for x in row:
+            new.append(new[-1] + x)
+        row = new
+    return row[-1]
+ 
+ 
+def show_allocation(bins, cap):
+    print(f"  Servers used: {len(bins)}   (capacity per server = {cap})")
+    print(f"  {'Server':<8}{'Workloads':<40}{'Used':>6}{'Remaining':>11}")
+    for i, b in enumerate(bins, 1):
+        print(f"  S{i:<7}{str(b):<40}{sum(b):>6}{cap - sum(b):>11}")
+        assert sum(b) <= cap
+    total = sum(sum(b) for b in bins)
+    print(f"  Total demand = {total}, lower bound ceil(total/cap) = {-(-total // cap)}, "
+          f"utilisation = {100 * total / (len(bins) * cap):.1f}%")
+ 
+ 
+def main():
+    d = json.load(open("input_data.json"))
+    cap = d["capacity"]
+ 
+    print("=" * 90)
+    print("B4.1  IMPLEMENTATION - First Fit Decreasing on 24 workloads")
+    print("=" * 90)
+    w = d["demo_workloads"]
+    print("  Workload demands (arrival order):", w)
+    print("  Sorted (largest first)          :", sorted(w, reverse=True))
+    bins, probes = first_fit_decreasing(w, cap)
+    show_allocation(bins, cap)
+    print(f"  Segment-tree probes: {probes}")
+ 
+    print("\n" + "=" * 90)
+    print("BOUNDARY / FAILURE TESTS")
+    print("=" * 90)
+    for t in d["boundary_tests"]:
+        try:
+            b, _ = first_fit_decreasing(t["workloads"], t["capacity"])
+            print(f"  {t['name']:<40} -> servers = {len(b)}   layout = {b}")
+        except ValueError as e:
+            print(f"  {t['name']:<40} -> rejected: {e}")
+ 
+    print("\n" + "=" * 90)
+    print("B4.2  CHALLENGE INPUT - FFD vs exact optimum")
+    print("=" * 90)
+    ch = d["challenge"]
+    ffd, _ = first_fit_decreasing(ch["workloads"], ch["capacity"])
+    opt, nodes = exact_min_bins(ch["workloads"], ch["capacity"])
+    print(f"  capacity = {ch['capacity']}, workloads = {ch['workloads']}  (sum = {sum(ch['workloads'])})")
+    print(f"  FFD layout    : {ffd}  -> {len(ffd)} servers")
+    print(f"  Exact optimum : {opt} servers  (branch-and-bound nodes = {nodes})")
+    print("  An optimal packing is {45,31,24} = 100 and {61,18,17} = 96 -> 2 servers.")
+    print("  FFD filled server 1 with 61+31 (the tightest fit for the biggest item), which left 45,24,18,17 = 104 > 100.")
+ 
+    print("\n" + "=" * 90)
+    print("HOW OFTEN DOES FFD MISS THE OPTIMUM?  (random small inputs, exact solver as reference)")
+    print("=" * 90)
+    rt = d["random_small_trials"]
+    worse, max_gap = 0, 0
+    for i in range(rt["count"]):
+        ws = random_workloads(rt["n"], rt["lo"], rt["hi"], rt["seed"] + i)
+        f = len(first_fit_decreasing(ws, cap)[0])
+        o, _ = exact_min_bins(ws, cap)
+        worse += f > o
+        max_gap = max(max_gap, f - o)
+        assert f >= o
+    print(f"  {rt['count']} random inputs with {rt['n']} workloads each: FFD > optimum in {worse} cases "
+          f"({100 * worse / rt['count']:.1f}%); largest gap observed = {max_gap} server(s).")
+ 
+    print("\n" + "=" * 90)
+    print("PRODUCTION-SCALE EVIDENCE  (demands uniform in [1,60], capacity 100)")
+    print("=" * 90)
+    print(f"  {'n':>6} {'LowerBnd':>9} {'FFD':>6} {'FirstFit':>9} {'NextFit':>8} {'FFD/LB':>7} "
+          f"{'FFD probes':>11} {'FFD time s':>11}")
+    for sp in d["scale_specs"]:
+        ws = random_workloads(sp["n"], sp["lo"], sp["hi"], sp["seed"])
+        lb = -(-sum(ws) // cap)
+        t0 = time.perf_counter(); b1, p1 = first_fit_decreasing(ws, cap); t1 = time.perf_counter()
+        b2, _ = first_fit(ws, cap)
+        b3, _ = next_fit(ws, cap)
+        print(f"  {sp['n']:>6} {lb:>9} {len(b1):>6} {len(b2):>9} {len(b3):>8} {len(b1) / lb:>7.3f} "
+              f"{p1:>11,} {t1 - t0:>11.4f}")
+    print("\n  Exhaustive search for comparison: partitions of n workloads into servers = Bell number B(n);")
+    print(f"  B(20) = {bell(20):,} and B(1000) has {len(str(bell(1000)))} digits.")
+ 
+ 
+if __name__ == "__main__":
+    main()
+
+generate_input.py  (creates input_data.json)
+"""Generates input_data.json for Task B4 (workload placement)."""
+import json
+from bp_core import random_workloads
+ 
+data = {
+  "capacity": 100,
+  "demo_workloads": random_workloads(24, 10, 70, seed=2024),
+  "challenge": {"capacity": 100, "workloads": [18, 61, 24, 45, 31, 17]},
+  "boundary_tests": [
+     {"name": "No workloads", "capacity": 100, "workloads": []},
+     {"name": "One workload equals capacity", "capacity": 100, "workloads": [100]},
+     {"name": "Every workload equals capacity", "capacity": 100, "workloads": [100, 100, 100]},
+     {"name": "Invalid: demand exceeds capacity", "capacity": 100, "workloads": [40, 101]},
+     {"name": "Invalid: zero demand", "capacity": 100, "workloads": [0, 5]},
+  ],
+  "scale_specs": [
+     {"n": 1000,  "lo": 1, "hi": 60, "seed": 11},
+     {"n": 5000,  "lo": 1, "hi": 60, "seed": 12},
+     {"n": 20000, "lo": 1, "hi": 60, "seed": 13},
+  ],
+  "random_small_trials": {"count": 300, "n": 9, "lo": 8, "hi": 60, "seed": 99},
+}
+json.dump(data, open("input_data.json", "w"))
+print("input_data.json written")
