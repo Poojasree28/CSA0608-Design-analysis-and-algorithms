@@ -1,0 +1,146 @@
+"""
+Task B3 - Exact vs Approximate: Emergency Service Set Cover.
+ 
+Zones are bits of an integer (bitmask), each centre is a bitmask of the zones it serves.
+ 
+Solution A (EXACT)  : iterative-deepening enumeration. Try every combination of r centres
+                      for r = 1, 2, 3, ...; the FIRST r that has a covering combination is
+                      the optimum. Effort metric = number of combinations examined.
+Solution B (GREEDY) : repeatedly pick the centre covering the most still-uncovered zones.
+                      Effort metric = number of (centre, uncovered) gain evaluations.
+"""
+import json
+import random
+import time
+from itertools import combinations
+from math import comb
+ 
+ 
+def make_instance(zones, centres, p, seed):
+    """Random instance; every zone is guaranteed to be coverable by at least one centre."""
+    r = random.Random(seed)
+    sets = [0] * centres
+    for z in range(zones):
+        for c in range(centres):
+            if r.random() < p:
+                sets[c] |= 1 << z
+    for z in range(zones):                       # repair: make sure each zone is coverable
+        if not any(s >> z & 1 for s in sets):
+            sets[r.randrange(centres)] |= 1 << z
+    return sets
+ 
+ 
+def instance_from_dict(d):
+    names = list(d["centres"].keys())
+    sets = []
+    for nm in names:
+        m = 0
+        for z in d["centres"][nm]:
+            m |= 1 << (z - 1)
+        sets.append(m)
+    return names, sets
+ 
+ 
+def exact_cover(sets, zones):
+    """Return (optimal list of centre indices, combinations examined)."""
+    universe = (1 << zones) - 1
+    examined = 0
+    for r in range(1, len(sets) + 1):
+        for combo in combinations(range(len(sets)), r):
+            examined += 1
+            cov = 0
+            for i in combo:
+                cov |= sets[i]
+            if cov == universe:
+                return list(combo), examined
+    return None, examined                         # some zone cannot be covered at all
+ 
+ 
+def greedy_cover(sets, zones):
+    """Return (chosen centre indices in pick order, gain evaluations, trace)."""
+    uncovered = (1 << zones) - 1                  # state: uncovered zones
+    chosen, evals, trace = [], 0, []              # state: selected centres
+    while uncovered:                              # termination: nothing left uncovered
+        best, best_gain = -1, 0
+        for i, s in enumerate(sets):
+            if i in chosen:
+                continue
+            gain = bin(s & uncovered).count("1")  # selection criterion
+            evals += 1
+            if gain > best_gain:
+                best, best_gain = i, gain
+        if best == -1:                            # no centre helps -> infeasible instance
+            return None, evals, trace
+        chosen.append(best)
+        uncovered &= ~sets[best]                  # state update
+        trace.append((best, best_gain, bin(uncovered).count("1")))
+    return chosen, evals, trace
+ 
+ 
+def zones_of(mask):
+    return [i + 1 for i in range(mask.bit_length()) if mask >> i & 1]
+ 
+ 
+def main():
+    d = json.load(open("input_data.json"))
+ 
+    # ---------------- B3.1 -----------------
+    print("=" * 92)
+    print("B3.1  CORRECTNESS ON SMALL INSTANCES (randomly generated, none hand-picked)")
+    print("=" * 92)
+    print(f"{'Instance':<12}{'Zones':>6}{'Centres':>8}{'Exact size':>12}{'Greedy size':>13}{'Same?':>8}")
+    for sp in d["small_random_specs"]:
+        sets = make_instance(sp["zones"], sp["centres"], sp["p"], sp["seed"])
+        ex, _ = exact_cover(sets, sp["zones"])
+        gr, _, _ = greedy_cover(sets, sp["zones"])
+        assert len(ex) <= len(gr)                 # optimum can never be larger than greedy
+        print(f"{sp['name']:<12}{sp['zones']:>6}{sp['centres']:>8}{len(ex):>12}{len(gr):>13}"
+              f"{'YES' if len(ex) == len(gr) else 'NO':>8}")
+        print(f"    exact centres  : {[f'C{i + 1}' for i in ex]}")
+        print(f"    greedy centres : {[f'C{i + 1}' for i in gr]}")
+ 
+    # ---------------- B3.2 -----------------
+    print("\n" + "=" * 92)
+    print("B3.2  COUNTEREXAMPLE - greedy does not return a minimum cover")
+    print("=" * 92)
+    ce = d["counterexample"]
+    names, sets = instance_from_dict(ce)
+    for nm, s in zip(names, sets):
+        print(f"  {nm} serves {zones_of(s)}   (size {len(zones_of(s))})")
+    ex, ex_eval = exact_cover(sets, ce["zones"])
+    gr, ge, trace = greedy_cover(sets, ce["zones"])
+    print(f"\n  Exact optimum : {[names[i] for i in ex]}  -> size {len(ex)}  (combinations examined: {ex_eval})")
+    print(f"  Greedy result : {[names[i] for i in gr]}  -> size {len(gr)}")
+    print("\n  Greedy trace:")
+    uncovered = (1 << ce["zones"]) - 1
+    for step, (i, gain, left) in enumerate(trace, 1):
+        print(f"   step {step}: uncovered before = {zones_of(uncovered)}")
+        print(f"           pick {names[i]} (covers {gain} new zones)  -> {left} zones left")
+        uncovered &= ~sets[i]
+    print(f"  Decision that led away from optimum: step 1 picked C3 (gain 8) instead of C1/C2 (gain 7).")
+ 
+    # ---------------- B3.3 -----------------
+    print("\n" + "=" * 92)
+    print("B3.3  INCREASING PROBLEM SIZE (exact + greedy, both instrumented)")
+    print("=" * 92)
+    print(f"{'Zones x Centres':<17}{'Search space 2^m':>17}{'Exact: combos':>15}{'Greedy: evals':>15}"
+          f"{'Exact':>7}{'Greedy':>8}{'Exact s':>9}{'Greedy s':>10}")
+    for sp in d["scaling_specs"]:
+        sets = make_instance(sp["zones"], sp["centres"], sp["p"], sp["seed"])
+        t0 = time.perf_counter(); ex, ec = exact_cover(sets, sp["zones"]); t1 = time.perf_counter()
+        gr, ge, _ = greedy_cover(sets, sp["zones"]); t2 = time.perf_counter()
+        print(f"{sp['zones']:>4} x {sp['centres']:<10}{2 ** sp['centres']:>17,}{ec:>15,}{ge:>15,}"
+              f"{len(ex):>7}{len(gr):>8}{t1 - t0:>9.3f}{t2 - t1:>10.4f}")
+    print("\nLarge instances - exact search not attempted (2^m subsets), greedy only:")
+    print(f"{'Zones x Centres':<17}{'Search space 2^m':>20}{'Exact: combos':>15}{'Greedy: evals':>15}"
+          f"{'Greedy':>8}{'Greedy s':>10}")
+    for sp in d["greedy_only_specs"]:
+        sets = make_instance(sp["zones"], sp["centres"], sp["p"], sp["seed"])
+        t0 = time.perf_counter(); gr, ge, _ = greedy_cover(sets, sp["zones"]); t1 = time.perf_counter()
+        digits = len(str(2 ** sp["centres"]))
+        print(f"{sp['zones']:>5} x {sp['centres']:<9}{'~10^' + str(digits - 1):>20}{'infeasible':>15}"
+              f"{ge:>15,}{len(gr):>8}{t1 - t0:>10.4f}")
+ 
+ 
+if __name__ == "__main__":
+    main()
