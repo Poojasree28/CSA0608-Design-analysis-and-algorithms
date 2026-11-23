@@ -1,0 +1,71 @@
+"""
+Task B2 - Engineer an Adversarial Input: same size, very different search.
+Re-uses the instrumented backtracking routine of Task B1 (graph_colouring.py).
+ 
+Graph A and Graph B both have 16 vertices and k = 3 server groups.
+They differ by ONE edge (14-15):  A has K4 minus an edge (3-colourable),
+                                  B has the full K4 (needs 4 colours).
+In both, vertices 0..11 form a sparse path that comes FIRST in the input order and
+vertices 12..15 form the dense 'core' that comes LAST.
+"""
+import json
+from graph_colouring import colour_graph, is_valid_colouring, Stats
+ 
+PREDICTION = """PREDICTION (written BEFORE executing the programs)
+  1. Graph B will need far more search than Graph A.
+  2. Dead ends (failed subtrees that force a backtrack) will arise ONLY at the last
+     four vertices (12..15): the path prefix 0..11 can be coloured in 3*2^11 = 6144
+     different ways and every one of them looks perfectly fine until the K4 core is
+     reached.
+  3. Pruning happens LATE for Graph B: the feasibility test only detects a clash when
+     the 4th core vertex is tried, so each of the ~6144 prefix colourings must be
+     built, fail at the core, and be undone (thrashing).  For Graph A the core is
+     colourable, so the first prefix colouring extends to a full solution."""
+ 
+ 
+def row(label, s):
+    return f"  {label:<34}{s.nodes:>10}{s.attempts:>11}{s.rejected:>10}{s.backtracks:>11}{s.max_depth:>7}"
+ 
+ 
+def main():
+    d = json.load(open("input_data.json"))
+    n, k = d["n"], d["k"]
+    print(PREDICTION)
+    print("\n" + "=" * 90)
+    print(f"EXECUTION   n = {n} vertices, k = {k} server groups")
+    print("=" * 90)
+    print(f"  {'Graph / Version':<34}{'Nodes':>10}{'Attempts':>11}{'Rejected':>10}{'Backtracks':>11}{'Depth':>7}")
+    results = {}
+    for key in ("graph_A", "graph_B"):
+        g = d[key]
+        print(f"\n{g['name']}   |E| = {len(g['edges'])}")
+        for strat, lab in (("input", "Version 1 (input order)"), ("dsatur", "Version 2 (DSATUR order)")):
+            col, s = colour_graph(n, g["edges"], k, strat)
+            if col:
+                assert is_valid_colouring(n, g["edges"], k, col)
+            results[(key, strat)] = s
+            print(row(lab, s), "  ->", f"colourable {col}" if col else "NOT colourable")
+    a, b = results[("graph_A", "input")], results[("graph_B", "input")]
+    print(f"\nWork ratio B/A (Version 1): nodes x{b.nodes / a.nodes:.0f}, "
+          f"backtracks x{b.backtracks / max(1, a.backtracks):.0f}  "
+          f"(A had {a.backtracks} backtracks)")
+ 
+    print("\n" + "=" * 90)
+    print("SCALING EXPERIMENT: path prefix length m grows, K4 core stays at the end")
+    print("(total vertices = m + 4, k = 3, Version 1 vs Version 2 on the UNCOLOURABLE graph)")
+    print("=" * 90)
+    print(f"  {'m':>3} {'n':>4} {'V1 nodes':>12} {'V1 backtracks':>14} {'V2 nodes':>10} {'V2 backtracks':>14}")
+    prev = None
+    for m in d["scaling_path_lengths"]:
+        edges = [[i, i + 1] for i in range(m - 1)] + [[m - 1, m]]
+        c = [m, m + 1, m + 2, m + 3]
+        edges += [[c[i], c[j]] for i in range(4) for j in range(i + 1, 4)]
+        _, s1 = colour_graph(m + 4, edges, 3, "input")
+        _, s2 = colour_graph(m + 4, edges, 3, "dsatur")
+        growth = f"  (x{s1.nodes / prev:.2f} vs previous)" if prev else ""
+        print(f"  {m:>3} {m + 4:>4} {s1.nodes:>12} {s1.backtracks:>14} {s2.nodes:>10} {s2.backtracks:>14}{growth}")
+        prev = s1.nodes
+ 
+ 
+if __name__ == "__main__":
+    main()
